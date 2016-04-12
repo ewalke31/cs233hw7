@@ -29,6 +29,14 @@ def main():
 # simulates the cache
 def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
     outputInfo = [0, 0, 0, 0, 0, 0, 0]
+    # HERE: create whatever data structure we want to represent the cache
+    for line in trace:
+        line = line.split()
+        if line[0] == 'l':
+            outputInfo[0] += 1
+        else:
+            outputInfo[1] += 1
+            
     return outputInfo
 
 
