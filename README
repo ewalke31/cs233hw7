@@ -15,9 +15,18 @@ Size:          ij D1-Cache miss rate:          ji:
 The reason write order (ij vs. ji) matters is because in c, arrays are stored
 with j increasing and then i increasing. Therefore, elements with the same i
 are stored next to each other. 
-The reason the ij writes have a lower cache miss rate (and is therefore faster)
-is due to memory locality. 
-With a 2D array of size 64 x 64, the access order does not matter. 
+The reason the ij writes have a lower cache miss rate (and is therefore 
+faster) is due to memory locality. When the CPU writes to memory, it firsts 
+checks the cache for that memory address. If it's not in the cache (miss) 
+the cache loads a block of values from memory. The size of this block depends 
+on the architecture, but the next few writes that write to addresses close 
+to the first missed address will be hits.
+With the ji writes, since the writes following a miss are not as close in 
+memory (4096 bytes away) although the first couple writes may be inside the
+previous block, many fewer consecutive write addresses will be. This leads
+to a greater miss rate.
+With a 2D array of size 64 x 64, the access order does not matter. The 
+reason for this is because the entire array is contained in the same block.
 
 Part 2)
 Size: 4096
@@ -27,6 +36,15 @@ O1                     6.2%                            99.8%
 O2                     6.2%                            99.8%
 O3                     24.8%                           99.1%
 
-
-
+Once the compiler flags are set, the assignments occur in an unknown order.
+Since this code can't really be optimzed very much, we do not know what 
+the order is after optimzation. One possible explanation is that the inner 
+loop assignment is mixed up at the 1st and 2nd optimization levels. This does
+not affect the ij access that significantly, because it's likely that any
+jth address for a given i will still be in the same block. For the ji access
+however, the random i causes the accesses to be a random number times 4096
+bytes away from each other, which is almost always outside of the last block.
+The third optimization may affect the outer loop as well, which hinders
+the ij access significantly. 
+--------------------------------------------------------------------------------
 Problem 2
