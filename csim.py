@@ -3,6 +3,7 @@
 # CSF HW 7
 
 import sys
+import math
 
 
 def main():
@@ -20,8 +21,9 @@ def main():
         print("Invalid cache design parameters.")
         sys.exit(1)
     inputList = readInput(sys.argv[7])
-    outputInfo = simulate(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
-                          sys.argv[5], sys.argv[6], inputList)
+    outputInfo = simulate(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]),
+                          int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6]),
+                          inputList)
     output(outputInfo)
     return
 
@@ -30,13 +32,45 @@ def main():
 def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
     outputInfo = [0, 0, 0, 0, 0, 0, 0]
     # HERE: create whatever data structure we want to represent the cache
+    validMask = 2
+    dirtyMask = 1
+    blockMask = (numBlocks - 1) << int(math.log(numBytes/4, 2))
+    setMask = (numSets - 1) << int(math.log(numBlocks, 2)) \
+        << int(math.log(numBytes/4, 2))
+    maskSize = int(math.log(numSets, 2) + math.log(numBlocks, 2) \
+        + math.log(numBytes/4, 2))
+    tagMask = int(math.pow(2, 32 - maskSize) - 1) << maskSize
+    cache = [[0]*numBlocks for _ in range(numSets)]
     for line in trace:
         line = line.split()
+        binAddr = int(line[1], 16)
+        setIndex = (setMask & binAddr) >> int(math.log(numBlocks, 2)) \
+            >> int(math.log(numBytes/4, 2))
+        blockIndex = (blockMask & binAddr) >> int(math.log(numBytes/4, 2))
         if line[0] == 'l':
             outputInfo[0] += 1
-        else:
+            if cache[setIndex][blockIndex] & validMask == 2 \
+               and ((cache[setIndex][blockIndex] >> 2) == \
+                    ((binAddr & tagMask) >> maskSize)):
+                outputInfo[2] += 1
+                outputInfo[6] += 1
+            else:
+                outputInfo[3] += 1
+                outputInfo[6] += (100 * numBytes/4) + 1
+                cache[setIndex][blockIndex] = 2
+        else:  # if line[0] == 's'
             outputInfo[1] += 1
+            if cache[setIndex][blockIndex] & validMask == 2 \
+               and ((cache[setIndex][blockIndex] >> 2) == \
+                    ((binAddr & tagMask) >> maskSize)):
+                outputInfo[4] += 1
+                cache[setIndex][blockIndex] += 1
+                
+
+
+
             
+
     return outputInfo
 
 
@@ -67,7 +101,7 @@ def output(outputInfo):
     print("Load misses: " + str(outputInfo[3]))
     print("Store hits: " + str(outputInfo[4]))
     print("Store misses: " + str(outputInfo[5]))
-    print("Total cycles: " + str(outputInfo[6]))
+    print("Total cycles: " + str(int(outputInfo[6])))
 
 
 if __name__ == "__main__":
