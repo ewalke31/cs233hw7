@@ -46,26 +46,55 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
         binAddr = int(line[1], 16)
         setIndex = (setMask & binAddr) >> int(math.log(numBlocks, 2)) \
             >> int(math.log(numBytes/4, 2))
-        blockIndex = (blockMask & binAddr) >> int(math.log(numBytes/4, 2))
+#        blockIndex = (blockMask & binAddr) >> int(math.log(numBytes/4, 2))
         if line[0] == 'l':
             outputInfo[0] += 1
-            if cache[setIndex][blockIndex] & validMask == 2 \
-               and ((cache[setIndex][blockIndex] >> 2) == \
-                    ((binAddr & tagMask) >> maskSize)):
-                outputInfo[2] += 1
-                outputInfo[6] += 1
-            else:
+            found = False
+            numValid = 0
+            for block in cache[setIndex]:
+                if block & validMask == 2:
+                    if((block >> 2) == ((binAddr & tagMask) >> maskSize)):
+                        outputInfo[2] += 1
+                        outputInfo[6] += 1
+                        found = True
+                    numValid += 1
+            if found == False:
                 outputInfo[3] += 1
                 outputInfo[6] += (100 * numBytes/4) + 1
-                cache[setIndex][blockIndex] = 2
+                if numValid < numBlocks:
+                    cache[setIndex][numValid] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
+                else:  # numValid == numBlocks
+                    x = 1  # placeholder
+                    # evict some shit and if its dirty add 100 * numBytes/4 cycles
         else:  # if line[0] == 's'
             outputInfo[1] += 1
-            if cache[setIndex][blockIndex] & validMask == 2 \
-               and ((cache[setIndex][blockIndex] >> 2) == \
-                    ((binAddr & tagMask) >> maskSize)):
-                outputInfo[4] += 1
-                cache[setIndex][blockIndex] += 1
-                
+            numValid = 0
+            for block in cache[setIndex]:
+                if block & validMask == 2 \
+                   and ((block >> 2) == ((binAddr & tagMask) >> maskSize)):
+                    outputInfo[4] += 1
+                    if block & dirtyMask == 0:
+                        block += 1
+                    if wtorb == 0:  # if write back
+                        outputInfo[6] += 1
+                    else:  # if write through
+                        outputInfo[6] += 101
+                    break
+                if block & validMask == 0:
+                    outputInfo[5] += 1
+                    if walloc == 0:  # if not write allocate
+                        outputInfo[6] += 100
+                    else:  # if write allocate
+                        block = ((binAddr & tagMask) >> (maskSize - 2)) + 2
+                        outputInfo[6] += 100 * numBytes/4 + 1
+                        if wtorb == 1:
+                            outputInfo[6] += 100
+                    break
+                numValid += 1
+            if numValid == numBlocks:
+                x = 1  # placeholder
+                # evict some shit and if its dirty add 100 * numBytes/4 cycles
+                        
 
 
 
