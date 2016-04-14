@@ -48,3 +48,11 @@ The third optimization may affect the outer loop as well, which hinders
 the ij access significantly. 
 --------------------------------------------------------------------------------
 Problem 2
+
+Comments within csim.py explain our process. We go through the trace and based
+on whether it is a load or store add different numbers to the output info
+depending on which case it matches. We use a list (indexed by set) of
+dictionaries that map the block number to the timestamp, updating the time for
+any access for LRU and only when written for FIFO. We use a 2D list to
+represent the cache, and this keeps track of the tag, valid bit, and dirty bit,
+updating when appropriate.
