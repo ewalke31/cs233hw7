@@ -63,6 +63,7 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         found = True
                         if evictMethod == 1:  # LRU
                             evictSLD[setIndex][numValid] = time.clock()
+                        break
                     numValid += 1
             if not found:
                 outputInfo[3] += 1
@@ -90,16 +91,16 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                 if block & validMask == 2 \
                    and ((block >> 2) == ((binAddr & tagMask) >> maskSize)):
                     outputInfo[4] += 1
-                    if block & dirtyMask == 0:
-                        block += 1
                     if wtorb == 0:  # if write back
                         outputInfo[6] += 1
+                        if block & dirtyMask == 0:
+                            block += 1
                     else:  # if write through
                         outputInfo[6] += 101
                     if evictMethod == 1:  # LRU
                         evictSLD[setIndex][numValid] = time.clock()
                     break
-                if block & validMask == 0:
+                if block & validMask == 0:  # not valid
                     outputInfo[5] += 1
                     if walloc == 0:  # if not write allocate
                         outputInfo[6] += 100
