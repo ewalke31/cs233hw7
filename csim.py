@@ -52,27 +52,28 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
         setIndex = (setMask & binAddr) >> int(math.log(numBlocks, 2)) \
             >> int(math.log(numBytes/4, 2))
         if line[0] == 'l':
-            outputInfo[0] += 1
+            outputInfo[0] += 1  # total loads
             found = False
             numValid = 0
             for block in cache[setIndex]:
                 if block & validMask == 2:
                     if((block >> 2) == ((binAddr & tagMask) >> maskSize)):
-                        outputInfo[2] += 1
-                        outputInfo[6] += 1
+                        outputInfo[2] += 1  # load hit
+                        outputInfo[6] += 1  # cost of 1 for cache load
                         found = True
                         if evictMethod == 1:  # LRU
                             evictSLD[setIndex][numValid] = time.clock()
                         break
                     numValid += 1
             if not found:
-                outputInfo[3] += 1
+                outputInfo[3] += 1  # load miss
+                # cost of reading from ram to cache and cache to cpu
                 outputInfo[6] += (100 * numBytes/4) + 1
-                if numValid < numBlocks:
+                if numValid < numBlocks:  # if empty block
                     cache[setIndex][numValid] = ((binAddr & tagMask)
                                                  >> (maskSize - 2)) + 2
                     evictSLD[setIndex][numValid] = time.clock()
-                else:
+                else:  # if all full, must evict
                     minv = float("inf")
                     mink = None
                     for key, value in evictSLD[setIndex].items():
@@ -80,28 +81,29 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                             minv = value
                             mink = key
                     if cache[setIndex][mink] & dirtyMask == 1:
+                        # cost of writing from cache to ram if dirty
                         outputInfo[6] += 100 * numBytes/4
                     cache[setIndex][mink] = ((binAddr & tagMask)
                                              >> (maskSize - 2)) + 2
                     evictSLD[setIndex][mink] = time.clock()
         else:  # if line[0] == 's'
-            outputInfo[1] += 1
+            outputInfo[1] += 1  # total stores
             numValid = 0
             for block in cache[setIndex]:
                 if block & validMask == 2 \
                    and ((block >> 2) == ((binAddr & tagMask) >> maskSize)):
-                    outputInfo[4] += 1
+                    outputInfo[4] += 1  # store hit
                     if wtorb == 0:  # if write back
-                        outputInfo[6] += 1
+                        outputInfo[6] += 1  # cost of writing just to cache
                         if block & dirtyMask == 0:
-                            block += 1
+                            block += 1  # make dirty if not already
                     else:  # if write through
-                        outputInfo[6] += 101
+                        outputInfo[6] += 101  # cost of writing to cache and ram
                     if evictMethod == 1:  # LRU
                         evictSLD[setIndex][numValid] = time.clock()
                     break
                 if block & validMask == 0:  # not valid
-                    outputInfo[5] += 1
+                    outputInfo[5] += 1  # store miss
                     if walloc == 0:  # if not write allocate
                         outputInfo[6] += 100
                     else:  # if write allocate
@@ -109,11 +111,11 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         outputInfo[6] += 100 * numBytes/4 + 1
                         if wtorb == 1:
                             outputInfo[6] += 100
-                    evictSLD[setIndex][numValid] = time.clock()
+                        evictSLD[setIndex][numValid] = time.clock()
                     break
                 numValid += 1
             if numValid == numBlocks:  # if we need to evict something
-                outputInfo[5] += 1
+                outputInfo[5] += 1  # store miss
                 minv = float("inf")
                 mink = None
                 for key, value in evictSLD[setIndex].items():
@@ -132,7 +134,7 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                 outputInfo[6] += 1  # cost of writing to cache
                 if wtorb == 1:
                     outputInfo[6] += 100  # cost of writing to ram
-
+    print(evictSLD)
     return outputInfo
 
 
