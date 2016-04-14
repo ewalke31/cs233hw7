@@ -4,6 +4,7 @@
 
 import sys
 import math
+import time
 
 
 def main():
@@ -31,7 +32,12 @@ def main():
 # simulates the cache
 def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
     outputInfo = [0, 0, 0, 0, 0, 0, 0]
-    # HERE: create whatever data structure we want to represent the cache
+    evictSLD = [None]*numSets
+    for i in range(numSets):
+        blockDict = {}
+        for j in range(numBlocks):
+            blockDict[j] = float("inf")  # max time value
+        evictSLD[i] = blockDict
     validMask = 2
     dirtyMask = 1
     blockMask = (numBlocks - 1) << int(math.log(numBytes/4, 2))
@@ -46,7 +52,6 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
         binAddr = int(line[1], 16)
         setIndex = (setMask & binAddr) >> int(math.log(numBlocks, 2)) \
             >> int(math.log(numBytes/4, 2))
-#        blockIndex = (blockMask & binAddr) >> int(math.log(numBytes/4, 2))
         if line[0] == 'l':
             outputInfo[0] += 1
             found = False
@@ -57,15 +62,26 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         outputInfo[2] += 1
                         outputInfo[6] += 1
                         found = True
+                        if evictMethod == 1:  # LRU
+                            evictSLD[setIndex][numValid] = time.clock()
                     numValid += 1
             if found == False:
                 outputInfo[3] += 1
                 outputInfo[6] += (100 * numBytes/4) + 1
                 if numValid < numBlocks:
                     cache[setIndex][numValid] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
-                else:  # numValid == numBlocks
-                    x = 1  # placeholder
-                    # evict some shit and if its dirty add 100 * numBytes/4 cycles
+                    evictSLD[setIndex][numValid] = time.clock()                
+                else:
+                    minv = float("inf")
+                    mink = None
+                    for key, value in evictSLD[setIndex].items():
+                        if value < minv:
+                            minv = value
+                            mink = key
+                    if cache[setIndex][mink] & dirtyMask == 1:
+                        outputInfo[6] += 100 * numBytes/4
+                    cache[setIndex][mink] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
+                    evictSLD[setIndex][mink] = time.clock()
         else:  # if line[0] == 's'
             outputInfo[1] += 1
             numValid = 0
@@ -79,6 +95,8 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         outputInfo[6] += 1
                     else:  # if write through
                         outputInfo[6] += 101
+                    if evictMethod == 1:  # LRU
+                        evictSLD[setIndex][numValid] = time.clock()
                     break
                 if block & validMask == 0:
                     outputInfo[5] += 1
@@ -89,16 +107,26 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         outputInfo[6] += 100 * numBytes/4 + 1
                         if wtorb == 1:
                             outputInfo[6] += 100
+                    evictSLD[setIndex][numValid] = time.clock()
                     break
                 numValid += 1
-            if numValid == numBlocks:
-                x = 1  # placeholder
-                # evict some shit and if its dirty add 100 * numBytes/4 cycles
-                        
-
-
-
-            
+            if numValid == numBlocks:  # if we need to evict something
+                outputInfo[5] += 1
+                minv = float("inf")
+                mink = None
+                for key, value in evictSLD[setIndex].items():
+                    if value < minv:
+                        minv = value
+                        mink = key
+                    if cache[setIndex][mink] & dirtyMask == 1:
+                        outputInfo[6] += 100 * numBytes/4  # cost of writing dirty from cache to ram
+                if walloc == 1:
+                    outputInfo[6] += 100 * numBytes/4  # cost of reading from ram to cache
+                    cache[setIndex][mink] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
+                    evictSLD[setIndex][mink] = time.clock()
+                outputInfo[6] += 1  # cost of writing to cache
+                if wtorb == 1:
+                    outputInfo[6] += 100  # cost of writing to ram
 
     return outputInfo
 
