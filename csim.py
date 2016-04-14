@@ -94,6 +94,8 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                    and ((block >> 2) == ((binAddr & tagMask) >> maskSize)):
                     outputInfo[4] += 1  # store hit
                     if wtorb == 0:  # if write back
+                        cache[setIndex][numValid] = ((binAddr & tagMask)
+                                                     >> (maskSize - 2)) + 2
                         outputInfo[6] += 1  # cost of writing just to cache
                         if block & dirtyMask == 0:
                             block += 1  # make dirty if not already
@@ -111,6 +113,8 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         outputInfo[6] += 100 * numBytes/4 + 1
                         if wtorb == 1:
                             outputInfo[6] += 100
+                        cache[setIndex][numValid] = ((binAddr & tagMask)
+                                                     >> (maskSize - 2)) + 2
                         evictSLD[setIndex][numValid] = time.clock()
                     break
                 numValid += 1
