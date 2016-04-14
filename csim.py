@@ -134,7 +134,7 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                 outputInfo[6] += 1  # cost of writing to cache
                 if wtorb == 1:
                     outputInfo[6] += 100  # cost of writing to ram
-    print(evictSLD)
+
     return outputInfo
 
 
