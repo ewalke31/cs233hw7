@@ -40,11 +40,10 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
         evictSLD[i] = blockDict
     validMask = 2
     dirtyMask = 1
-    blockMask = (numBlocks - 1) << int(math.log(numBytes/4, 2))
     setMask = (numSets - 1) << int(math.log(numBlocks, 2)) \
         << int(math.log(numBytes/4, 2))
-    maskSize = int(math.log(numSets, 2) + math.log(numBlocks, 2) \
-        + math.log(numBytes/4, 2))
+    maskSize = int(math.log(numSets, 2) + math.log(numBlocks, 2)
+                   + math.log(numBytes/4, 2))
     tagMask = int(math.pow(2, 32 - maskSize) - 1) << maskSize
     cache = [[0]*numBlocks for _ in range(numSets)]
     for line in trace:
@@ -65,12 +64,13 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         if evictMethod == 1:  # LRU
                             evictSLD[setIndex][numValid] = time.clock()
                     numValid += 1
-            if found == False:
+            if not found:
                 outputInfo[3] += 1
                 outputInfo[6] += (100 * numBytes/4) + 1
                 if numValid < numBlocks:
-                    cache[setIndex][numValid] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
-                    evictSLD[setIndex][numValid] = time.clock()                
+                    cache[setIndex][numValid] = ((binAddr & tagMask)
+                                                 >> (maskSize - 2)) + 2
+                    evictSLD[setIndex][numValid] = time.clock()
                 else:
                     minv = float("inf")
                     mink = None
@@ -80,7 +80,8 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                             mink = key
                     if cache[setIndex][mink] & dirtyMask == 1:
                         outputInfo[6] += 100 * numBytes/4
-                    cache[setIndex][mink] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
+                    cache[setIndex][mink] = ((binAddr & tagMask)
+                                             >> (maskSize - 2)) + 2
                     evictSLD[setIndex][mink] = time.clock()
         else:  # if line[0] == 's'
             outputInfo[1] += 1
@@ -119,10 +120,13 @@ def simulate(numSets, numBlocks, numBytes, walloc, wtorb, evictMethod, trace):
                         minv = value
                         mink = key
                     if cache[setIndex][mink] & dirtyMask == 1:
-                        outputInfo[6] += 100 * numBytes/4  # cost of writing dirty from cache to ram
+                        # cost of writing dirty from cache to ram
+                        outputInfo[6] += 100 * numBytes/4
                 if walloc == 1:
-                    outputInfo[6] += 100 * numBytes/4  # cost of reading from ram to cache
-                    cache[setIndex][mink] = ((binAddr & tagMask) >> (maskSize - 2)) + 2
+                    # cost of reading from ram to cache
+                    outputInfo[6] += 100 * numBytes/4
+                    cache[setIndex][mink] = ((binAddr & tagMask)
+                                             >> (maskSize - 2)) + 2
                     evictSLD[setIndex][mink] = time.clock()
                 outputInfo[6] += 1  # cost of writing to cache
                 if wtorb == 1:
